@@ -3,6 +3,9 @@ class PirateGame {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
         this.puzzleManager = new PuzzleManager();
+        this.is3DMode = false;
+        this.renderer3D = null;
+        
         this.gameState = {
             gold: 0,
             curse: 0,
@@ -87,6 +90,7 @@ class PirateGame {
         document.getElementById('sail-btn').addEventListener('click', () => this.sail());
         document.getElementById('crew-btn').addEventListener('click', () => this.showCrewModal());
         document.getElementById('leaderboard-btn').addEventListener('click', () => this.showLeaderboardModal());
+        document.getElementById('view-toggle').addEventListener('click', () => this.toggle3DView());
         document.getElementById('modal-close').addEventListener('click', () => this.closeModal());
         
         // Canvas click for movement
@@ -114,7 +118,67 @@ class PirateGame {
         this.drawIsland();
     }
     
+    toggle3DView() {
+        this.is3DMode = !this.is3DMode;
+        const toggleBtn = document.getElementById('view-toggle');
+        
+        if (this.is3DMode) {
+            toggleBtn.textContent = '🗺️ 2D View';
+            this.init3DRenderer();
+        } else {
+            toggleBtn.textContent = '🌍 3D View';
+            this.renderer3D = null;
+            if (this.cssRenderer3D) {
+                this.cssRenderer3D.hide();
+                this.cssRenderer3D = null;
+            }
+            this.drawIsland();
+        }
+    }
+    
+    init3DRenderer() {
+        try {
+            // Try WebGL first
+            this.renderer3D = new Island3DRenderer(this.canvas);
+            if (this.renderer3D && this.renderer3D.gl) {
+                this.update3DScene();
+                return;
+            }
+        } catch (error) {
+            console.log('WebGL not available, using CSS 3D fallback');
+        }
+        
+        // Fallback to CSS 3D
+        try {
+            this.cssRenderer3D = new CSS3DRenderer(this.canvas);
+            this.cssRenderer3D.show();
+            this.update3DScene();
+        } catch (error) {
+            console.error('3D initialization failed:', error);
+            this.showMessage('3D Error', 'Failed to initialize 3D view. Using 2D mode.');
+            this.is3DMode = false;
+            document.getElementById('view-toggle').textContent = '🌍 3D View';
+        }
+    }
+    
+    update3DScene() {
+        const island = this.islands[this.gameState.currentIsland];
+        
+        if (this.renderer3D && this.renderer3D.gl) {
+            this.renderer3D.updatePlayerPosition(this.playerPos.x / 50 - 8, this.playerPos.y / 50 - 6);
+            this.renderer3D.updateTreasures(island.treasures);
+        } else if (this.cssRenderer3D) {
+            this.cssRenderer3D.updatePlayerPosition((this.playerPos.x - 400) / 4, (this.playerPos.y - 300) / 4);
+            this.cssRenderer3D.updateTreasures(island.treasures);
+        }
+    }
+    
     drawIsland() {
+        if (this.is3DMode && (this.renderer3D || this.cssRenderer3D)) {
+            this.update3DScene();
+            return;
+        }
+        
         const ctx = this.ctx;
         const island = this.islands[this.gameState.currentIsland];
         
@@ -320,19 +384,7 @@ class PirateGame {
     
     sail() {
         if (this.gameState.currentIsland < this.islands.length - 1) {
-            this.gameState.currentIsland++;
-            this.playerPos = { x: 400, y: 300 };
-            this.gameState.exploredAreas.clear();
-            
-            const island = this.islands[this.gameState.currentIsland];
-            island.treasures = this.generateTreasures(3 + this.gameState.currentIsland);
-            
-            this.showMessage("New Island Discovered! 🏝️", 
-                `Welcome to ${island.name}! ${island.description}`);
-            
-            this.updateUI();
-            this.updateRiddlesPanel();
-            this.drawIsland();
+            this.startSailingAnimation();
         } else {
             if (this.gameState.mapPieces.length >= 3) {
                 this.showFinalTreasureModal();
@@ -341,6 +393,258 @@ class PirateGame {
                     `You need at least 3 map pieces to locate the Heart of Gold. You have ${this.gameState.mapPieces.length}.`);
             }
         }
+    }
+    
+    startSailingAnimation() {
+        // Disable all buttons during animation
+        this.setButtonsEnabled(false);
+        
+        // Create sailing overlay
+        this.createSailingOverlay();
+        
+        // Start animation sequence
+        setTimeout(() => {
+            this.animateShipSailing();
+        }, 500);
+    }
+    
+    createSailingOverlay() {
+        this.sailingOverlay = document.createElement('div');
+        this.sailingOverlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #87CEEB 0%, #4682B4 50%, #2F4F4F 100%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.5rem;
+            text-align: center;
+        `;
+        
+        // Add sailing text
+        const sailingText = document.createElement('div');
+        sailingText.innerHTML = `
+            <h2 style="margin-bottom: 2rem; color: #FFD700;">⛵ Sailing to New Waters...</h2>
+            <div id="sailing-progress" style="font-size: 1rem; margin-bottom: 2rem;">Preparing to set sail...</div>
+        `;
+        
+        // Create ship element
+        this.ship = document.createElement('div');
+        this.ship.style.cssText = `
+            position: relative;
+            width: 80px;
+            height: 60px;
+            margin: 2rem 0;
+        `;
+        
+        // Ship hull
+        const hull = document.createElement('div');
+        hull.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 20px;
+            background: #8B4513;
+            border-radius: 30px 30px 5px 5px;
+            border: 2px solid #654321;
+        `;
+        
+        // Mast
+        const mast = document.createElement('div');
+        mast.style.cssText = `
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 35px;
+            background: #8B4513;
+        `;
+        
+        // Sail
+        const sail = document.createElement('div');
+        sail.style.cssText = `
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-30%);
+            width: 25px;
+            height: 20px;
+            background: #F5F5DC;
+            border: 1px solid #DDD;
+            border-radius: 0 15px 0 5px;
+            animation: sailWave 2s ease-in-out infinite;
+        `;
+        
+        // Flag
+        const flag = document.createElement('div');
+        flag.style.cssText = `
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15px;
+            height: 10px;
+            background: #FF0000;
+            border-radius: 0 3px 3px 0;
+            animation: flagWave 1.5s ease-in-out infinite;
+        `;
+        flag.innerHTML = '☠️';
+        flag.style.fontSize = '8px';
+        flag.style.color = 'white';
+        flag.style.textAlign = 'center';
+        flag.style.lineHeight = '10px';
+        
+        this.ship.appendChild(hull);
+        this.ship.appendChild(mast);
+        this.ship.appendChild(sail);
+        this.ship.appendChild(flag);
+        
+        sailingText.appendChild(this.ship);
+        this.sailingOverlay.appendChild(sailingText);
+        
+        // Add waves
+        this.createWaves();
+        
+        this.canvas.parentElement.appendChild(this.sailingOverlay);
+        
+        // Add CSS animations
+        this.addSailingAnimations();
+    }
+    
+    createWaves() {
+        for (let i = 0; i < 5; i++) {
+            const wave = document.createElement('div');
+            wave.style.cssText = `
+                position: absolute;
+                bottom: ${10 + i * 15}px;
+                left: ${-100 + i * 50}px;
+                width: 200px;
+                height: 10px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50px;
+                animation: waveMove ${3 + i * 0.5}s linear infinite;
+            `;
+            this.sailingOverlay.appendChild(wave);
+        }
+    }
+    
+    addSailingAnimations() {
+        const style = document.createElement('style');
+        style.id = 'sailing-animations';
+        style.textContent = `
+            @keyframes sailWave {
+                0%, 100% { transform: translateX(-30%) skewX(0deg); }
+                50% { transform: translateX(-30%) skewX(5deg); }
+            }
+            
+            @keyframes flagWave {
+                0%, 100% { transform: translateX(-50%) rotate(0deg); }
+                50% { transform: translateX(-50%) rotate(10deg); }
+            }
+            
+            @keyframes waveMove {
+                0% { transform: translateX(-100px); opacity: 0; }
+                50% { opacity: 1; }
+                100% { transform: translateX(100vw); opacity: 0; }
+            }
+            
+            @keyframes shipSail {
+                0% { transform: translateX(-100px) scale(0.8); }
+                50% { transform: translateX(50vw) scale(1); }
+                100% { transform: translateX(calc(100vw + 100px)) scale(0.8); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    animateShipSailing() {
+        const progressText = document.getElementById('sailing-progress');
+        const messages = [
+            'Setting sail from the harbor...',
+            'Navigating through open waters...',
+            'Following the treasure map...',
+            'Spotting the new island ahead...',
+            'Approaching the mysterious shores...'
+        ];
+        
+        let messageIndex = 0;
+        
+        // Update progress messages
+        const messageInterval = setInterval(() => {
+            if (messageIndex < messages.length) {
+                progressText.textContent = messages[messageIndex];
+                messageIndex++;
+            }
+        }, 800);
+        
+        // Animate ship movement
+        this.ship.style.animation = 'shipSail 4s ease-in-out';
+        
+        // Complete sailing after animation
+        setTimeout(() => {
+            clearInterval(messageInterval);
+            this.completeSailing();
+        }, 4000);
+    }
+    
+    completeSailing() {
+        // Move to next island
+        this.gameState.currentIsland++;
+        this.playerPos = { x: 400, y: 300 };
+        this.gameState.exploredAreas.clear();
+        
+        const island = this.islands[this.gameState.currentIsland];
+        island.treasures = this.generateTreasures(3 + this.gameState.currentIsland);
+        
+        // Remove sailing overlay
+        if (this.sailingOverlay) {
+            this.sailingOverlay.remove();
+            this.sailingOverlay = null;
+        }
+        
+        // Remove animations
+        const animationStyle = document.getElementById('sailing-animations');
+        if (animationStyle) {
+            animationStyle.remove();
+        }
+        
+        // Re-enable buttons
+        this.setButtonsEnabled(true);
+        
+        // Update game
+        this.updateUI();
+        this.updateRiddlesPanel();
+        this.drawIsland();
+        
+        // Show arrival message
+        setTimeout(() => {
+            this.showMessage("New Island Discovered! 🏝️", 
+                `Welcome to ${island.name}! ${island.description}`);
+        }, 500);
+    }
+    
+    setButtonsEnabled(enabled) {
+        const buttons = [
+            'explore-btn', 'dig-btn', 'sail-btn', 'crew-btn', 'view-toggle', 'leaderboard-btn'
+        ];
+        
+        buttons.forEach(id => {
+            const button = document.getElementById(id);
+            if (button) {
+                button.disabled = !enabled;
+                button.style.opacity = enabled ? '1' : '0.5';
+                button.style.cursor = enabled ? 'pointer' : 'not-allowed';
+            }
+        });
     }
     
     showCrewModal() {
