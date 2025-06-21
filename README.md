@@ -2,6 +2,9 @@
 
 An engaging pirate adventure game that works on both web and mobile platforms. Explore mysterious islands, solve ancient riddles, hunt for treasure, and manage your pirate crew while avoiding the growing curse!
 
+## 🎮 Game Preview
+![Game Screenshot](screenshot/image.png)
+
 ## 🎮 Game Features
 
 - **Island Exploration**: Navigate through 3 unique islands with distinct themes
