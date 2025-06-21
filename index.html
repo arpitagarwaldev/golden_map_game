@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏴‍☠️ Curse of the Golden Map</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <header id="game-header">
+            <h1>🏴‍☠️ Curse of the Golden Map</h1>
+            <div id="stats">
+                <span id="gold">💰 Gold: 0</span>
+                <span id="curse">👻 Curse: 0%</span>
+                <span id="crew">⚓ Crew: 1</span>
+            </div>
+        </header>
+
+        <main id="game-world">
+            <div id="riddles-panel">
+                <h3>🧩 Ancient Riddles</h3>
+                <div id="riddles-list"></div>
+            </div>
+
+            <div id="island-view">
+                <canvas id="game-canvas" width="800" height="600"></canvas>
+                <div id="ui-overlay">
+                    <div id="action-buttons">
+                        <button id="explore-btn">🗺️ Explore</button>
+                        <button id="dig-btn">⛏️ Dig</button>
+                        <button id="sail-btn">⛵ Sail</button>
+                        <button id="crew-btn">👥 Crew</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="info-panel">
+                <div id="location-info">
+                    <h3 id="island-name">Mysterious Island</h3>
+                    <p id="island-description">A fog-shrouded island with ancient secrets...</p>
+                </div>
+                
+                <div id="inventory">
+                    <h4>🎒 Inventory</h4>
+                    <div id="items-list"></div>
+                </div>
+
+                <div id="map-pieces">
+                    <h4>🗺️ Map Pieces</h4>
+                    <div id="map-collection"></div>
+                </div>
+            </div>
+        </main>
+
+        <div id="modal-overlay" class="hidden">
+            <div id="modal-content">
+                <span id="modal-close">&times;</span>
+                <div id="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
