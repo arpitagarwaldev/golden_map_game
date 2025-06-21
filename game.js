@@ -2,6 +2,7 @@ class PirateGame {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
+        this.puzzleManager = new PuzzleManager();
         this.gameState = {
             gold: 0,
             curse: 0,
@@ -12,71 +13,8 @@ class PirateGame {
             exploredAreas: new Set()
         };
         
-        this.islands = [
-            {
-                name: "Skull Cove",
-                description: "A mysterious cove where ancient pirates once hid their treasures...",
-                treasures: [
-                    { 
-                        x: 300, y: 200, found: false, value: 50, originalValue: 50, curse: 5,
-                        riddle: "Where shadows dance beneath the palm's embrace, seek the treasure in nature's hiding place.",
-                        answer: "palm tree",
-                        solved: false,
-                        hintsUsed: 0
-                    },
-                    { 
-                        x: 500, y: 350, found: false, value: 100, originalValue: 100, curse: 10,
-                        riddle: "At the island's heart where all paths meet, the golden prize lies at your feet.",
-                        answer: "center",
-                        solved: false,
-                        hintsUsed: 0
-                    }
-                ],
-                mapPiece: { found: false, riddle: "Where the skull grins at the moon's light" }
-            },
-            {
-                name: "Siren's Rest",
-                description: "An enchanted island where mermaids once sang sailors to their doom...",
-                treasures: [
-                    { 
-                        x: 200, y: 300, found: false, value: 75, originalValue: 75, curse: 8,
-                        riddle: "Where the ocean kisses the sandy shore, ancient coins rest forevermore.",
-                        answer: "shore",
-                        solved: false,
-                        hintsUsed: 0
-                    },
-                    { 
-                        x: 600, y: 150, found: false, value: 150, originalValue: 150, curse: 15,
-                        riddle: "High above where eagles soar, the siren's treasure waits in store.",
-                        answer: "high",
-                        solved: false,
-                        hintsUsed: 0
-                    }
-                ],
-                mapPiece: { found: false, riddle: "Where songs echo through coral caves" }
-            },
-            {
-                name: "Devil's Triangle",
-                description: "A cursed island shrouded in perpetual mist and dark magic...",
-                treasures: [
-                    { 
-                        x: 400, y: 250, found: false, value: 200, originalValue: 200, curse: 20,
-                        riddle: "In the devil's domain where darkness reigns, the cursed gold breaks mortal chains.",
-                        answer: "darkness",
-                        solved: false,
-                        hintsUsed: 0
-                    },
-                    { 
-                        x: 150, y: 400, found: false, value: 300, originalValue: 300, curse: 25,
-                        riddle: "Where the triangle's corner points to doom, the greatest treasure breaks the gloom.",
-                        answer: "corner",
-                        solved: false,
-                        hintsUsed: 0
-                    }
-                ],
-                mapPiece: { found: false, riddle: "Where three points meet in eternal darkness" }
-            }
-        ];
+        this.leaderboard = this.loadLeaderboard();
+        this.generateIslands();
         
         this.crewMembers = [
             { name: "Captain Redbeard", skill: "Leadership", recruited: true },
@@ -88,6 +26,51 @@ class PirateGame {
         
         this.playerPos = { x: 400, y: 300 };
         this.init();
+    }
+    
+    generateIslands() {
+        this.islands = [];
+        const islandNames = [
+            { name: "Skull Cove", desc: "A mysterious cove where ancient pirates once hid their treasures..." },
+            { name: "Siren's Rest", desc: "An enchanted island where mermaids once sang sailors to their doom..." },
+            { name: "Devil's Triangle", desc: "A cursed island shrouded in perpetual mist and dark magic..." },
+            { name: "Kraken's Lair", desc: "Deep waters where the legendary sea monster guards ancient gold..." },
+            { name: "Phantom Isle", desc: "A ghostly island that appears only to the most cursed pirates..." }
+        ];
+        
+        for (let i = 0; i < islandNames.length; i++) {
+            const island = {
+                name: islandNames[i].name,
+                description: islandNames[i].desc,
+                treasures: this.generateTreasures(3 + i),
+                mapPiece: { found: false, riddle: `Ancient secret of ${islandNames[i].name}` }
+            };
+            this.islands.push(island);
+        }
+    }
+    
+    generateTreasures(count) {
+        const treasures = [];
+        for (let i = 0; i < count; i++) {
+            const puzzle = this.puzzleManager.getRandomPuzzle();
+            const treasure = {
+                x: 150 + Math.random() * 500,
+                y: 150 + Math.random() * 300,
+                found: false,
+                value: 50 + (i * 25) + Math.floor(Math.random() * 100),
+                originalValue: 0,
+                curse: 5 + (i * 3),
+                riddle: puzzle.riddle,
+                answer: puzzle.answer,
+                similarAnswers: puzzle.similarAnswers,
+                solved: false,
+                hintsUsed: 0,
+                quit: false
+            };
+            treasure.originalValue = treasure.value;
+            treasures.push(treasure);
+        }
+        return treasures;
     }
     
     init() {
@@ -103,6 +86,7 @@ class PirateGame {
         document.getElementById('dig-btn').addEventListener('click', () => this.dig());
         document.getElementById('sail-btn').addEventListener('click', () => this.sail());
         document.getElementById('crew-btn').addEventListener('click', () => this.showCrewModal());
+        document.getElementById('leaderboard-btn').addEventListener('click', () => this.showLeaderboardModal());
         document.getElementById('modal-close').addEventListener('click', () => this.closeModal());
         
         // Canvas click for movement
@@ -286,20 +270,26 @@ class PirateGame {
                 
                 treasure.found = true;
                 foundTreasure = true;
-                this.gameState.gold += treasure.value;
-                this.gameState.curse += treasure.curse;
                 
-                // Add treasure glow effect
-                document.getElementById('gold').classList.add('treasure-found');
-                setTimeout(() => {
-                    document.getElementById('gold').classList.remove('treasure-found');
-                }, 3000);
+                if (treasure.quit) {
+                    this.gameState.curse += Math.floor(treasure.curse / 2);
+                    this.showMessage("Empty Treasure! 🚫", 
+                        `You found the treasure location, but the spirits took the gold as punishment for giving up! (+${Math.floor(treasure.curse / 2)}% curse)`);
+                } else {
+                    this.gameState.gold += treasure.value;
+                    this.gameState.curse += treasure.curse;
+                    
+                    document.getElementById('gold').classList.add('treasure-found');
+                    setTimeout(() => {
+                        document.getElementById('gold').classList.remove('treasure-found');
+                    }, 3000);
+                    
+                    this.showMessage("Treasure Found! 💰", 
+                        `You found ${treasure.value} gold! But the curse grows stronger... (+${treasure.curse}% curse)`);
+                }
                 
-                this.showMessage("Treasure Found! 💰", 
-                    `You found ${treasure.value} gold! But the curse grows stronger... (+${treasure.curse}% curse)`);
-                
-                // Check for map piece
-                if (!island.mapPiece.found && Math.random() < 0.5) {
+                const mapChance = treasure.quit ? 0.2 : 0.5;
+                if (!island.mapPiece.found && Math.random() < mapChance) {
                     island.mapPiece.found = true;
                     this.gameState.mapPieces.push({
                         island: island.name,
@@ -335,6 +325,8 @@ class PirateGame {
             this.gameState.exploredAreas.clear();
             
             const island = this.islands[this.gameState.currentIsland];
+            island.treasures = this.generateTreasures(3 + this.gameState.currentIsland);
+            
             this.showMessage("New Island Discovered! 🏝️", 
                 `Welcome to ${island.name}! ${island.description}`);
             
@@ -342,12 +334,11 @@ class PirateGame {
             this.updateRiddlesPanel();
             this.drawIsland();
         } else {
-            // Check if player has enough map pieces for final treasure
-            if (this.gameState.mapPieces.length >= 2) {
+            if (this.gameState.mapPieces.length >= 3) {
                 this.showFinalTreasureModal();
             } else {
                 this.showMessage("Need More Map Pieces", 
-                    `You need at least 2 map pieces to locate the Heart of Gold. You have ${this.gameState.mapPieces.length}.`);
+                    `You need at least 3 map pieces to locate the Heart of Gold. You have ${this.gameState.mapPieces.length}.`);
             }
         }
     }
@@ -452,8 +443,15 @@ class PirateGame {
     updateRiddlesPanel() {
         const riddlesList = document.getElementById('riddles-list');
         const island = this.islands[this.gameState.currentIsland];
+        const diffInfo = this.puzzleManager.getDifficultyInfo();
         
-        riddlesList.innerHTML = island.treasures.map((treasure, index) => {
+        riddlesList.innerHTML = `
+            <div style="background: rgba(255,215,0,0.1); padding: 1rem; margin-bottom: 1rem; border-radius: 8px; text-align: center;">
+                <div style="color: #ffd700; font-weight: bold; margin-bottom: 0.5rem;">${diffInfo.level}</div>
+                <div style="color: #ddd; font-size: 0.9rem;">Puzzles Solved: ${diffInfo.solved}</div>
+                <div style="color: #ddd; font-size: 0.8rem;">Difficulty: ${diffInfo.difficulty.toUpperCase()}</div>
+            </div>
+        ` + island.treasures.map((treasure, index) => {
             if (treasure.found) return '';
             
             return `
@@ -472,13 +470,15 @@ class PirateGame {
                             <button class="riddle-btn hint-btn" onclick="game.getHint(${index})">
                                 💡 Hint (-20% value)
                             </button>
+                            <button class="riddle-btn choice-btn" onclick="game.showMultipleChoice(${index})">
+                                🎲 Multiple Choice (40% Gold)
+                            </button>
                         </div>
                     ` : ''}
                 </div>
             `;
         }).join('');
         
-        // Add enter key listeners
         island.treasures.forEach((treasure, index) => {
             if (!treasure.found && !treasure.solved) {
                 const input = document.getElementById(`answer-${index}`);
@@ -498,15 +498,176 @@ class PirateGame {
         const treasure = island.treasures[treasureIndex];
         const userAnswer = document.getElementById(`answer-${treasureIndex}`).value.toLowerCase().trim();
         
-        if (userAnswer.includes(treasure.answer) || userAnswer === treasure.answer) {
+        const isCorrect = userAnswer === treasure.answer || 
+                         userAnswer.includes(treasure.answer) ||
+                         treasure.similarAnswers.some(similar => 
+                             userAnswer === similar || userAnswer.includes(similar)
+                         );
+        
+        if (isCorrect) {
             treasure.solved = true;
+            this.puzzleManager.markSolved();
+            const diffInfo = this.puzzleManager.getDifficultyInfo();
             this.showMessage("Riddle Solved! 🧩", 
-                `Brilliant! The ancient spirits approve. You may now dig for the treasure worth ${treasure.value} gold!`);
+                `Brilliant! The ancient spirits approve. You may now dig for the treasure worth ${treasure.value} gold!\n\n🎆 You are now: ${diffInfo.level}`);
             this.updateRiddlesPanel();
         } else {
             this.showMessage("Wrong Answer ❌", 
-                "The spirits shake their heads. Try again or use a hint!");
+                "The spirits shake their heads. Try again, use a hint, or quit to see the answer!");
         }
+    }
+    
+    showMultipleChoice(treasureIndex) {
+        const island = this.islands[this.gameState.currentIsland];
+        const treasure = island.treasures[treasureIndex];
+        
+        // Generate 3 wrong answers + 1 correct answer
+        const wrongAnswers = this.generateWrongAnswers(treasure.answer);
+        const allChoices = [...wrongAnswers, treasure.answer];
+        
+        // Shuffle the choices
+        for (let i = allChoices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allChoices[i], allChoices[j]] = [allChoices[j], allChoices[i]];
+        }
+        
+        const modalBody = document.getElementById('modal-body');
+        modalBody.innerHTML = `
+            <h2>🎲 Multiple Choice Challenge</h2>
+            <div style="background: rgba(255,215,0,0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                <p style="font-style: italic; color: #ffd700; font-size: 1.1em;">"${treasure.riddle}"</p>
+            </div>
+            <p>Choose the correct answer to earn 40% of the treasure's gold:</p>
+            <div style="margin: 1.5rem 0;">
+                ${allChoices.map((choice, index) => `
+                    <button onclick="game.checkMultipleChoice(${treasureIndex}, '${choice}', '${treasure.answer}')" 
+                            style="display: block; width: 100%; margin: 0.5rem 0; padding: 1rem; font-size: 1rem; 
+                                   background: rgba(139,69,19,0.3); color: #fff; border: 2px solid #ffd700; 
+                                   border-radius: 8px; cursor: pointer; text-align: left;"
+                            onmouseover="this.style.background='rgba(139,69,19,0.5)'"
+                            onmouseout="this.style.background='rgba(139,69,19,0.3)'">
+                        ${String.fromCharCode(65 + index)}. ${choice}
+                    </button>
+                `).join('')}
+            </div>
+            <button onclick="game.closeModal()" 
+                    style="padding: 0.8rem 1.5rem; background: #8B4513; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Cancel
+            </button>
+        `;
+        this.showModal();
+    }
+    
+    generateWrongAnswers(correctAnswer) {
+        const wrongAnswerPool = {
+            "sun": ["star", "light", "fire"],
+            "rain": ["water", "drops", "storm"],
+            "clock": ["time", "watch", "timer"],
+            "apple": ["fruit", "cherry", "berry"],
+            "table": ["desk", "surface", "platform"],
+            "snow": ["ice", "frost", "crystal"],
+            "keyboard": ["typewriter", "piano", "keys"],
+            "candle": ["flame", "light", "torch"],
+            "bottle": ["container", "vessel", "flask"],
+            "cloud": ["mist", "fog", "vapor"],
+            "comb": ["brush", "rake", "teeth"],
+            "ball": ["sphere", "globe", "orb"],
+            "butterfly": ["moth", "bird", "insect"],
+            "newspaper": ["magazine", "journal", "paper"],
+            "mouse": ["rat", "cursor", "pointer"],
+            "chocolate": ["candy", "sweet", "cocoa"],
+            "book": ["novel", "story", "text"],
+            "frog": ["toad", "lizard", "amphibian"],
+            "carrot": ["vegetable", "root", "orange"],
+            "zebra": ["horse", "donkey", "animal"],
+            "echo": ["sound", "voice", "reflection"],
+            "hole": ["gap", "space", "void"],
+            "map": ["chart", "guide", "atlas"],
+            "fire": ["flame", "heat", "blaze"],
+            "coin": ["money", "token", "disc"],
+            "circle": ["ring", "round", "loop"],
+            "bubble": ["sphere", "foam", "air"],
+            "joke": ["riddle", "humor", "story"],
+            "river": ["stream", "water", "flow"],
+            "pencil lead": ["graphite", "carbon", "lead"],
+            "library": ["bookstore", "archive", "collection"],
+            "tomorrow": ["future", "next", "later"],
+            "stamp": ["seal", "mark", "label"],
+            "sponge": ["foam", "absorber", "pad"],
+            "towel": ["cloth", "fabric", "dryer"],
+            "hurricane": ["storm", "cyclone", "wind"],
+            "honor": ["pride", "respect", "dignity"],
+            "wind": ["air", "breeze", "gust"],
+            "e": ["letter", "vowel", "character"],
+            "mountain": ["hill", "peak", "summit"],
+            "book": ["pages", "story", "text"],
+            "age": ["time", "years", "life"],
+            "smoke": ["vapor", "mist", "gas"],
+            "vampire": ["bat", "monster", "creature"],
+            "moon": ["satellite", "orb", "sphere"],
+            "dragon": ["beast", "monster", "serpent"],
+            "king of spades": ["card", "king", "spade"],
+            "few": ["little", "some", "less"],
+            "past": ["history", "before", "yesterday"],
+            "gravity": ["force", "pull", "weight"],
+            "salt": ["mineral", "crystal", "seasoning"],
+            "rest": ["pause", "break", "stop"],
+            "conscience": ["mind", "soul", "spirit"],
+            "knowledge": ["wisdom", "learning", "understanding"],
+            "possibility": ["chance", "potential", "maybe"],
+            "paradox": ["puzzle", "mystery", "contradiction"],
+            "infinity": ["forever", "endless", "eternal"],
+            "mystery": ["secret", "unknown", "puzzle"],
+            "fate": ["destiny", "fortune", "luck"],
+            "reflection": ["mirror", "thought", "image"],
+            "imagination": ["creativity", "fantasy", "vision"],
+            "emotion": ["feeling", "heart", "passion"],
+            "love": ["affection", "heart", "care"],
+            "hope": ["faith", "belief", "trust"],
+            "renewal": ["rebirth", "fresh", "new"],
+            "experience": ["life", "knowledge", "learning"],
+            "mind": ["brain", "thought", "consciousness"],
+            "wisdom": ["knowledge", "understanding", "insight"],
+            "life": ["existence", "living", "being"],
+            "truth": ["reality", "fact", "honest"],
+            "void": ["empty", "nothing", "space"],
+            "consciousness": ["awareness", "mind", "thought"],
+            "present": ["now", "current", "today"],
+            "reality": ["truth", "existence", "actual"],
+            "zen": ["peace", "calm", "balance"],
+            "journey": ["trip", "path", "voyage"],
+            "universe": ["cosmos", "world", "everything"]
+        };
+        
+        const pool = wrongAnswerPool[correctAnswer] || ["choice", "answer", "solution"];
+        return pool.slice(0, 3);
+    }
+    
+    checkMultipleChoice(treasureIndex, selectedAnswer, correctAnswer) {
+        const island = this.islands[this.gameState.currentIsland];
+        const treasure = island.treasures[treasureIndex];
+        
+        treasure.solved = true;
+        
+        if (selectedAnswer === correctAnswer) {
+            // Correct answer - give 40% of gold
+            treasure.value = Math.floor(treasure.originalValue * 0.4);
+            treasure.quit = false;
+            this.puzzleManager.markSolved();
+            const diffInfo = this.puzzleManager.getDifficultyInfo();
+            
+            this.showMessage("Correct Choice! 🎆", 
+                `Well done! You chose the right answer and earned ${treasure.value} gold (40% of original value).\n\n🎆 You are now: ${diffInfo.level}`);
+        } else {
+            // Wrong answer - no gold
+            treasure.value = 0;
+            treasure.quit = true;
+            
+            this.showMessage("Wrong Choice! ❌", 
+                `Sorry, the correct answer was "${correctAnswer}". You may find the treasure but get no gold.`);
+        }
+        
+        this.updateRiddlesPanel();
     }
     
     getHint(treasureIndex) {
@@ -556,6 +717,120 @@ class PirateGame {
         this.updateRiddlesPanel();
     }
     
+    loadLeaderboard() {
+        const saved = localStorage.getItem('pirateGameLeaderboard');
+        return saved ? JSON.parse(saved) : [];
+    }
+    
+    saveLeaderboard() {
+        localStorage.setItem('pirateGameLeaderboard', JSON.stringify(this.leaderboard));
+    }
+    
+    calculateScore() {
+        const diffInfo = this.puzzleManager.getDifficultyInfo();
+        const baseScore = this.gameState.gold;
+        const puzzleBonus = diffInfo.solved * 10;
+        const crewBonus = this.gameState.crew * 50;
+        const mapBonus = this.gameState.mapPieces.length * 100;
+        const cursePenalty = Math.floor(this.gameState.curse * 2);
+        
+        return Math.max(0, baseScore + puzzleBonus + crewBonus + mapBonus - cursePenalty);
+    }
+    
+    saveScore() {
+        const score = this.calculateScore();
+        const diffInfo = this.puzzleManager.getDifficultyInfo();
+        
+        const modalBody = document.getElementById('modal-body');
+        modalBody.innerHTML = `
+            <h2>💾 Save Your Score</h2>
+            <p><strong>Current Score:</strong> ${score}</p>
+            <p><strong>Rank:</strong> ${diffInfo.level}</p>
+            <p><strong>Puzzles Solved:</strong> ${diffInfo.solved}</p>
+            <div style="margin: 1rem 0;">
+                <input type="text" id="player-name" placeholder="Enter your pirate name..." 
+                       style="padding: 0.8rem; width: 100%; border-radius: 5px; border: 2px solid #ffd700; background: rgba(0,0,0,0.7); color: #fff; font-size: 1rem;" maxlength="20">
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="game.confirmSaveScore()" 
+                        style="padding: 0.8rem 1.5rem; background: #228B22; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    🏆 Save Score
+                </button>
+                <button onclick="game.closeModal()" 
+                        style="padding: 0.8rem 1.5rem; background: #8B4513; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Cancel
+                </button>
+            </div>
+        `;
+        this.showModal();
+        
+        setTimeout(() => {
+            document.getElementById('player-name').focus();
+        }, 100);
+    }
+    
+    confirmSaveScore() {
+        const playerName = document.getElementById('player-name').value.trim();
+        if (!playerName) {
+            alert('Please enter your pirate name!');
+            return;
+        }
+        
+        const score = this.calculateScore();
+        const diffInfo = this.puzzleManager.getDifficultyInfo();
+        
+        const entry = {
+            name: playerName,
+            score: score,
+            rank: diffInfo.level,
+            puzzlesSolved: diffInfo.solved,
+            date: new Date().toLocaleDateString()
+        };
+        
+        this.leaderboard.push(entry);
+        this.leaderboard.sort((a, b) => b.score - a.score);
+        this.leaderboard = this.leaderboard.slice(0, 10); // Keep top 10
+        
+        this.saveLeaderboard();
+        
+        this.showMessage('Score Saved! 🏆', 
+            `Congratulations, ${playerName}! Your score of ${score} has been added to the leaderboard.`);
+    }
+    
+    showLeaderboardModal() {
+        const modalBody = document.getElementById('modal-body');
+        const leaderboardContent = this.leaderboard.length === 0 ? 
+            '<div style="text-align: center; color: #888; font-style: italic; padding: 2rem;">No scores yet - be the first!</div>' :
+            this.leaderboard.map((entry, index) => {
+                const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                return `
+                    <div class="leaderboard-entry">
+                        <span class="leaderboard-rank">${rankEmoji}</span>
+                        <span class="leaderboard-name" title="${entry.name} - ${entry.date}">${entry.name}</span>
+                        <span class="leaderboard-score">${entry.score}</span>
+                    </div>
+                `;
+            }).join('');
+        
+        modalBody.innerHTML = `
+            <h2>🏆 Leaderboard</h2>
+            <div style="max-height: 400px; overflow-y: auto; margin: 1rem 0;">
+                ${leaderboardContent}
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+                <button onclick="game.saveScore()" 
+                        style="padding: 0.8rem 1.5rem; background: #228B22; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    💾 Save Current Score
+                </button>
+                <button onclick="game.closeModal()" 
+                        style="padding: 0.8rem 1.5rem; background: #8B4513; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Close
+                </button>
+            </div>
+        `;
+        this.showModal();
+    }
+    
     resetGame() {
         this.gameState = {
             gold: 0,
@@ -567,18 +842,9 @@ class PirateGame {
             exploredAreas: new Set()
         };
         
-        // Reset islands
-        this.islands.forEach(island => {
-            island.treasures.forEach(treasure => {
-                treasure.found = false;
-                treasure.solved = false;
-                treasure.hintsUsed = 0;
-                treasure.value = treasure.originalValue;
-            });
-            island.mapPiece.found = false;
-        });
+        this.puzzleManager.reset();
+        this.generateIslands();
         
-        // Reset crew
         this.crewMembers.forEach(member => {
             member.recruited = member.name === "Captain Redbeard";
         });
@@ -592,8 +858,69 @@ class PirateGame {
     }
     
     showWelcomeMessage() {
-        this.showMessage("Welcome, Captain! 🏴‍☠️", 
-            "You've discovered a cursed treasure map! Explore islands, dig for treasure, and recruit crew members. But beware - the more gold you collect, the stronger the curse becomes!");
+        const modalBody = document.getElementById('modal-body');
+        modalBody.innerHTML = `
+            <h2>🏴‍☠️ Welcome, Captain!</h2>
+            <div style="max-height: 400px; overflow-y: auto; text-align: left;">
+                <h3>🎯 Your Mission</h3>
+                <p>Solve 100+ ancient riddles, collect treasures, and find the legendary Heart of Gold!</p>
+                
+                <h3>🎮 Basic Controls</h3>
+                <ul>
+                    <li><strong>Move:</strong> Click/tap anywhere on the island</li>
+                    <li><strong>Explore:</strong> 🗺️ Search areas for items and clues</li>
+                    <li><strong>Dig:</strong> ⛏️ Collect treasures (after solving riddles)</li>
+                    <li><strong>Sail:</strong> ⛵ Travel between islands</li>
+                    <li><strong>Crew:</strong> 👥 Recruit helpful crew members</li>
+                </ul>
+                
+                <h3>🧩 Riddle System (Left Panel)</h3>
+                <ol>
+                    <li><strong>Read:</strong> Each treasure has a protective riddle</li>
+                    <li><strong>Answer:</strong> Type in the input field (accepts similar words)</li>
+                    <li><strong>Solve:</strong> 🔍 Submit or press Enter</li>
+                    <li><strong>Hint:</strong> 💡 Get clues (-20% treasure value)</li>
+                    <li><strong>Quit:</strong> 🏳️ See answer (but get no gold)</li>
+                </ol>
+                
+                <h3>🎆 Difficulty Progression</h3>
+                <ul>
+                    <li>🟢 <strong>Novice Pirate</strong> (0-5 solved): Easy riddles</li>
+                    <li>🟡 <strong>Seasoned Sailor</strong> (6-15 solved): Medium puzzles</li>
+                    <li>🟠 <strong>Expert Navigator</strong> (16-30 solved): Hard challenges</li>
+                    <li>🔴 <strong>Legendary Captain</strong> (31+ solved): Expert riddles</li>
+                </ul>
+                
+                <h3>⚙️ Game Mechanics</h3>
+                <ul>
+                    <li><strong>Gold:</strong> Earn by solving riddles and digging treasures</li>
+                    <li><strong>Curse:</strong> Increases with treasures (ghost attacks at high levels)</li>
+                    <li><strong>Crew:</strong> Recruit to reduce curse effects</li>
+                    <li><strong>Map Pieces:</strong> Collect 3+ to unlock final treasure</li>
+                </ul>
+                
+                <h3>🎨 Strategy Tips</h3>
+                <ul>
+                    <li>Use hints wisely - they reduce treasure value</li>
+                    <li>Quit strategically when stuck on hard puzzles</li>
+                    <li>Recruit crew early to manage curse effects</li>
+                    <li>Explore thoroughly before sailing to next island</li>
+                    <li>Balance risk: More treasures = more gold but higher curse</li>
+                </ul>
+                
+                <h3>🏆 Victory Conditions</h3>
+                <ul>
+                    <li>Collect 3+ map pieces from different islands</li>
+                    <li>Survive curse effects with crew's help</li>
+                    <li>Find and claim the Heart of Gold</li>
+                    <li>Achieve Legendary Captain rank!</li>
+                </ul>
+            </div>
+            <button onclick="game.closeModal()" style="padding: 1rem 2rem; margin-top: 1rem; font-size: 1.1rem; background: #228B22; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                ⚔️ Start Adventure!
+            </button>
+        `;
+        this.showModal();
     }
     
     showMessage(title, message) {

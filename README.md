@@ -13,14 +13,50 @@ An engaging pirate adventure game that works on both web and mobile platforms. E
 
 ## 🚀 How to Play
 
+### Getting Started
 1. Open `index.html` in any modern web browser
-2. Click/tap to move your pirate around the island
-3. Use the riddles panel on the left to solve puzzles
-4. Explore areas to find items and clues
-5. Dig for treasure once riddles are solved
-6. Recruit crew members to help with your journey
-7. Sail between islands to find all treasures
-8. Collect map pieces to unlock the final treasure
+2. You start as a **🟢 Novice Pirate** with easy puzzles
+3. Your goal: Solve 100+ riddles, collect treasures, and find the Heart of Gold!
+
+### Basic Controls
+- **Move**: Click/tap anywhere on the island to move your pirate
+- **Explore**: Click "🗺️ Explore" to search areas for items and clues
+- **Dig**: Click "⛏️ Dig" near treasure chests (after solving riddles)
+- **Sail**: Click "⛵ Sail" to travel between islands
+- **Crew**: Click "👥 Crew" to recruit helpful crew members
+
+### Riddle System (Left Panel)
+1. **Read the Riddle**: Each treasure is protected by an ancient puzzle
+2. **Enter Answer**: Type your answer in the input field (accepts similar words)
+3. **Solve**: Click "🔍 Solve" or press Enter to submit
+4. **Get Hints**: Click "💡 Hint" to get clues (reduces treasure value by 20%)
+5. **Quit Option**: Click "🏳️ Quit" to see the answer (but get no gold)
+
+### Difficulty Progression
+- **🟢 Novice Pirate** (0-5 solved): Easy riddles about everyday objects
+- **🟡 Seasoned Sailor** (6-15 solved): Medium riddles with wordplay
+- **🟠 Expert Navigator** (16-30 solved): Hard riddles requiring deep thinking
+- **🔴 Legendary Captain** (31+ solved): Expert philosophical puzzles
+
+### Game Mechanics
+- **Gold**: Earn by solving riddles and digging treasures
+- **Curse**: Increases with each treasure (causes ghost attacks at high levels)
+- **Crew**: Recruit members to reduce curse effects and gain special abilities
+- **Map Pieces**: Collect 3+ pieces to unlock the final treasure
+- **Inventory**: Store items found during exploration
+
+### Strategy Tips
+- **Use Hints Wisely**: They reduce treasure value but help with difficult puzzles
+- **Quit Strategically**: Sometimes it's better to quit and progress than get stuck
+- **Recruit Crew Early**: They help manage curse effects
+- **Explore Thoroughly**: Find items and clues before moving to next island
+- **Balance Risk**: More treasures = more gold but higher curse level
+
+### Victory Conditions
+- Collect at least 3 map pieces from different islands
+- Survive the curse effects with your crew's help
+- Find and claim the legendary Heart of Gold
+- Achieve the highest pirate rank possible!
 
 ## 🏝️ Islands
 
@@ -28,12 +64,14 @@ An engaging pirate adventure game that works on both web and mobile platforms. E
 2. **Siren's Rest** - Enchanted mermaid territory with magical rewards  
 3. **Devil's Triangle** - Cursed final challenge with the greatest treasures
 
-## 🧩 Riddle System
+## 🧩 Riddle System Features
 
-- Each treasure is protected by an ancient riddle
-- Solve riddles to unlock treasure digging
-- Use hints (reduces treasure value by 20%)
-- Maximum 2 hints per riddle
+- **100+ Unique Puzzles**: From simple to mind-bending challenges
+- **Adaptive Difficulty**: Puzzles get harder as you improve
+- **Multiple Answers**: Accepts synonyms and similar words
+- **Hint System**: Get up to 2 hints per riddle (20% value reduction each)
+- **Quit Option**: See answers instantly but forfeit gold rewards
+- **Progress Tracking**: Visual display of your pirate rank and solved count
 
 ## 👥 Crew Members
 

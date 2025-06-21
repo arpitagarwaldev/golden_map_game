@@ -45,6 +45,51 @@ body {
     border: 1px solid #ffd700;
 }
 
+#leaderboard-btn {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#leaderboard-btn:hover {
+    background: rgba(255, 215, 0, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.leaderboard-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 5px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    font-size: 0.9rem;
+}
+
+.leaderboard-rank {
+    font-weight: bold;
+    color: #ffd700;
+    min-width: 30px;
+}
+
+.leaderboard-name {
+    flex: 1;
+    color: #fff;
+    margin: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.leaderboard-score {
+    color: #90EE90;
+    font-weight: bold;
+    min-width: 80px;
+    text-align: right;
+}
+
 #game-world {
     flex: 1;
     display: flex;
@@ -145,8 +190,8 @@ body {
     color: white;
 }
 
-.quit-btn {
-    background: #8B0000;
+.choice-btn {
+    background: #FF8C00;
     color: white;
 }
 
@@ -333,6 +378,11 @@ body {
     #game-header h1 {
         font-size: 1.2rem;
     }
+    
+    .leaderboard-entry {
+        font-size: 0.8rem;
+        padding: 0.3rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -348,6 +398,10 @@ body {
     
     #stats span {
         padding: 0.3rem 0.8rem;
+    }
+    
+    .leaderboard-entry {
+        font-size: 0.7rem;
     }
 }
 
