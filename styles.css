@@ -145,6 +145,11 @@ body {
     color: white;
 }
 
+.quit-btn {
+    background: #8B0000;
+    color: white;
+}
+
 .riddle-btn:hover {
     opacity: 0.8;
     transform: translateY(-1px);
