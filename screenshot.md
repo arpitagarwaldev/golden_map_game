@@ -1,7 +1,7 @@
 # 🏴‍☠️ Game Screenshots
 
 ## Main Game Interface
-![Curse of the Golden Map](game-screenshot.png)
+![Curse of the Golden Map](screenshot/image.png)
 
 ### Game Features Shown:
 - **Left Panel**: Ancient riddles with solve/hint/quit options
