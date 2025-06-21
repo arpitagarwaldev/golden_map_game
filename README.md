@@ -2,6 +2,9 @@
 
 An engaging pirate adventure game that works on both web and mobile platforms. Explore mysterious islands, solve ancient riddles, hunt for treasure, and manage your pirate crew while avoiding the growing curse!
 
+## 🎮 Play Now!
+**[🏴‍☠️ Play the Game](https://arpitagarwaldev.github.io/golden_map_game/)**
+
 ## 🎮 Game Features
 
 - **Island Exploration**: Navigate through 3 unique islands with distinct themes
